@@ -72,7 +72,6 @@ def explorer(global_rb, is_training_done, queue):
         if local_rb.get_stored_size() >= local_buffer_size:
             sample = local_rb.get_all_transitions()
             TD = abs_TD(model, target, sample).detach().cpu().numpy()
-            # print(TD.shape)
             global_rb.add(**sample, priorities=TD)
             local_rb.clear()
 
@@ -137,4 +136,4 @@ if __name__ == "__main__":
     for p in ps:
         p.join()
 
-    torch.save(target.state_dict(), "state/model.pt")
+    torch.save(target.state_dict(), "state/model_1.pt")

@@ -3,8 +3,8 @@ from kaggle_environments.envs.hungry_geese.hungry_geese import Action
 ROW = 7
 COLUMN = 11
 
-WRAPPED_ROW = ROW + 2
-WRAPPED_COLUMN = COLUMN + 2
+ROW_CENTER = int((ROW - 1) / 2)
+COLUMN_CENTER = int((COLUMN - 1) / 2)
 
 HUNGER_RATE = 40
 N_REWARD = -1 / HUNGER_RATE

@@ -38,9 +38,10 @@ def encode_state(state):
             self_board[
                 row_col(translate(self_goose[0], Action[action].opposite(), COLUMN, ROW), COLUMN)
             ] = Grid.GOOSE_BODY  # virtual body to avoid taking opposite action
-            self_board[row_col(self_goose[0], COLUMN)] = Grid.GOOSE_HEAD
+            head_pos = row_col(self_goose[0], COLUMN)
+            self_board[head_pos] = Grid.GOOSE_HEAD
+            self_board = np.roll(self_board, (ROW_CENTER - head_pos[0], COLUMN_CENTER - head_pos[1]), axis=(0, 1))
 
-        # self_board = np.pad(self_board, 1, mode="wrap")
         board_list.append(self_board)
         action_list.append(action2num[action])
         reward_list.append(state[i]["reward"])

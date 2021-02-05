@@ -11,7 +11,18 @@ N_REWARD = -1 / HUNGER_RATE
 
 NUM_ACTION = len(Action)
 BUFFER_SIZE = 8196
-BATCH_SIZE = 128
+MIN_BUFFER = 256  # minimum buffer to start training
+BATCH_SIZE = 64
+
+GAMMA = 0.99
+
+LEARNING_RATE = 0.001
+
+NUM_EPOCHS = 100000
+N_EXPLORER = 3
+
+TARGET_UPDATE_FREQ = 16
+EXPLORER_UPDATE_FREQ = 32
 
 
 class Grid:
@@ -30,16 +41,28 @@ STATUS = {
     "DONE": 1
 }
 
-action2num = {
+ACTION2NUM = {
     "EAST": 0,
     "SOUTH": 1,
     "WEST": 2,
     "NORTH": 3,
 }
 
-num2action = {
+NUM2ACTION = {
     0: "EAST",
     1: "SOUTH",
     2: "WEST",
     3: "NORTH",
+}
+
+ENV_DICT = {
+    "board": {
+        "shape": (ROW, COLUMN)
+    },
+    "action": {},
+    "reward": {},
+    "next_board": {
+        "shape": (ROW, COLUMN)
+    },
+    "done": {}
 }

@@ -98,11 +98,9 @@ if __name__ == "__main__":
     target.eval()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-    print("warm-up")
     while global_rb.get_stored_size() < MIN_BUFFER:
         time.sleep(1)
 
-    print("training")
     for step in tqdm(range(NUM_EPOCHS)):
         sample = global_rb.sample(BATCH_SIZE)
 
@@ -139,4 +137,4 @@ if __name__ == "__main__":
     for p in ps:
         p.join()
 
-    torch.save(target.state_dict(), "model.pt")
+    torch.save(target.state_dict(), "state/model.pt")

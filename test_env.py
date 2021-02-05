@@ -3,5 +3,7 @@ from kaggle_environments.envs.hungry_geese.hungry_geese import Observation, Conf
 
 test_env = make("hungry_geese", debug=True)
 
-test_env.run(["test_agent.py", "test_agent.py"])
-test_env.step()
+# test_env.run(["test_agent.py", "test_agent.py"])
+# test_env.step()
+
+print(test_env.configuration)

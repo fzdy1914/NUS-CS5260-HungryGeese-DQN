@@ -52,7 +52,7 @@ def abs_TD(model, target, sample):
         return torch.abs(q1 - q2)
 
 
-def explorer(global_rb, is_training_done, queue, min_epsilon, max_epsilon, epsilon_decay):
+def explorer(global_rb, is_training_done, queue):
     local_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT)
 
     model = ConvDQN().cuda()
@@ -60,13 +60,12 @@ def explorer(global_rb, is_training_done, queue, min_epsilon, max_epsilon, epsil
     target.load_state_dict(model.state_dict())
     env = make("hungry_geese", debug=False)
 
-    epsilon = max_epsilon
+    epsilon = 0
     while not is_training_done.is_set():
         if not queue.empty():
-            model_state, target_state, step = queue.get()
+            model_state, target_state, epsilon = queue.get()
             model.load_state_dict(model_state)
             target.load_state_dict(target_state)
-            epsilon = compute_epsilon(step, min_epsilon, max_epsilon, epsilon_decay)
 
         env.reset(4)
         while not env.done:
@@ -95,7 +94,7 @@ if __name__ == "__main__":
 
     qs = [SimpleQueue() for _ in range(N_EXPLORER)]
     ps = [Process(target=explorer,
-                  args=(global_rb, is_training_done, q, min_epsilon, max_epsilon, epsilon_decay))
+                  args=(global_rb, is_training_done, q))
           for q in qs]
 
     for p in ps:
@@ -140,8 +139,9 @@ if __name__ == "__main__":
             for name, tensor in target.state_dict(keep_vars=True).items():
                 target_state[name] = tensor.detach().clone().cpu()
 
+            epsilon = compute_epsilon(step, min_epsilon, max_epsilon, epsilon_decay)
             for q in qs:
-                q.put((model_state, target_state, step))
+                q.put((model_state, target_state, epsilon))
 
     is_training_done.set()
 

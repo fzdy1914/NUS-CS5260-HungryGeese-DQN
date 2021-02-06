@@ -46,7 +46,7 @@ def abs_TD(model, target, sample):
 
 
 def explorer(global_rb, is_training_done, queue):
-    local_buffer_size = int(128)
+    local_buffer_size = int(256)
     local_rb = ReplayBuffer(local_buffer_size, ENV_DICT)
 
     model = ConvDQN().cuda()
@@ -63,7 +63,7 @@ def explorer(global_rb, is_training_done, queue):
         env.reset(4)
         while not env.done:
             board_list, _, _, _ = encode_state(env.state)
-            action = model.act(torch.from_numpy(np.stack(board_list)).float().cuda(), epsilon=0.1)
+            action = model.act(torch.from_numpy(np.stack(board_list)).float().cuda(), epsilon=0.0)
             action = [NUM2ACTION[i.item()] for i in action]
             env.step(action)
 
@@ -91,6 +91,7 @@ if __name__ == "__main__":
         p.start()
 
     model = ConvDQN().cuda()
+    model.load_state_dict(torch.load("./state/model_3.pt"))
     model.train()
     target = ConvDQN().cuda()
     target.load_state_dict(model.state_dict())
@@ -136,4 +137,4 @@ if __name__ == "__main__":
     for p in ps:
         p.join()
 
-    torch.save(target.state_dict(), "state/model_1.pt")
+    torch.save(target.state_dict(), "state/model_4.pt")

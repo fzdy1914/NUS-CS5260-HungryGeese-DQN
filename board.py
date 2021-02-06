@@ -75,7 +75,7 @@ def encode_env(env, buffer, interest_agent=(1, 0, 0, 0)):
             if length_diff > 0:
                 reward = 1
             elif length_diff < 0:
-                reward = -10
+                reward = -5
 
             buffer.add(board=current_board_list[i],
                        action=action_list[i],

@@ -98,7 +98,7 @@ def encode_env(env, buffer,
                            next_board=next_board_list[i],
                            done=next_done_list[i],
                            length=current_length_list[i],
-                           next_length=next_length_list)
+                           next_length=next_length_list[i])
             else:
                 buffer.add(board=current_board_list[i],
                            action=action_list[i],

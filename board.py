@@ -51,7 +51,12 @@ def encode_state(state):
     return board_list, action_list, done_list, length_list
 
 
-def encode_env(env, buffer, interest_agent=(1, 0, 0, 0)):
+def encode_env(env, buffer,
+               interest_agent=(1, 0, 0, 0),
+               normal_reward=DEFAULT_NORMAL_REWARD,
+               food_reward=DEFAULT_FOOD_REWARD,
+               hit_reward=DEFAULT_HIT_REWARD
+               ):
     num_agent = len(env.state)
     t_max = len(env.steps)
     active_list = [True if active == 1 else False for active in interest_agent]
@@ -70,12 +75,12 @@ def encode_env(env, buffer, interest_agent=(1, 0, 0, 0)):
             if not active_list[i]:
                 continue
 
-            reward = N_REWARD
+            reward = normal_reward
             length_diff = next_length_list[i] - current_length_list[i]
             if length_diff > 0:
-                reward = 1
+                reward = food_reward
             elif length_diff < 0:
-                reward = -5
+                reward = hit_reward
 
             buffer.add(board=current_board_list[i],
                        action=action_list[i],

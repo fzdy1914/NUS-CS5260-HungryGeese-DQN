@@ -40,10 +40,11 @@ class ConvDQN(nn.Module):
         return x
 
     def act(self, x, epsilon=0.0):
-        if random.random() < epsilon:
-            return torch.randint(self.num_actions, size=(x.size(0),))
-        else:
-            return self.greedy(x)
+        x = self.greedy(x)
+        for i in range(x.size(0)):
+            if random.random() < epsilon:
+                x[i] = torch.randint(self.num_actions, size=(1,))
+        return x
 
 
 class ConvDQN_1(nn.Module):
@@ -83,7 +84,8 @@ class ConvDQN_1(nn.Module):
         return x
 
     def act(self, x, epsilon=0.0):
-        if random.random() < epsilon:
-            return torch.randint(self.num_actions, size=(x.size(0),))
-        else:
-            return self.greedy(x)
+        x = self.greedy(x)
+        for i in range(x.size(0)):
+            if random.random() < epsilon:
+                x[i] = torch.randint(self.num_actions, size=(1,))
+        return x

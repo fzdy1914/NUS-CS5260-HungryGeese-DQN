@@ -1,3 +1,5 @@
+import math
+
 import torch
 
 from multiprocessing import Process, Event, SimpleQueue
@@ -12,6 +14,11 @@ import torch.nn.functional as F
 
 from cpprb import ReplayBuffer, MPPrioritizedReplayBuffer
 from parameters import *
+
+
+def compute_epsilon(episode, min_epsilon, max_epsilon, epsilon_decay):
+    epsilon = min_epsilon + (max_epsilon - min_epsilon) * math.exp(-1. * episode / epsilon_decay)
+    return epsilon
 
 
 def unpack_sample(sample):
@@ -45,31 +52,32 @@ def abs_TD(model, target, sample):
         return torch.abs(q1 - q2)
 
 
-def explorer(global_rb, is_training_done, queue):
-    local_buffer_size = int(256)
-    local_rb = ReplayBuffer(local_buffer_size, ENV_DICT)
+def explorer(global_rb, is_training_done, queue, min_epsilon, max_epsilon, epsilon_decay):
+    local_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT)
 
     model = ConvDQN().cuda()
     target = ConvDQN().cuda()
     target.load_state_dict(model.state_dict())
     env = make("hungry_geese", debug=False)
 
+    epsilon = max_epsilon
     while not is_training_done.is_set():
         if not queue.empty():
-            model_state, target_state = queue.get()
+            model_state, target_state, step = queue.get()
             model.load_state_dict(model_state)
             target.load_state_dict(target_state)
+            epsilon = compute_epsilon(step, min_epsilon, max_epsilon, epsilon_decay)
 
         env.reset(4)
         while not env.done:
             board_list, _, _, _ = encode_state(env.state)
-            action = model.act(torch.from_numpy(np.stack(board_list)).float().cuda(), epsilon=0.0)
+            action = model.act(torch.from_numpy(np.stack(board_list)).float().cuda(), epsilon=epsilon)
             action = [NUM2ACTION[i.item()] for i in action]
             env.step(action)
 
         encode_env(env, local_rb, (1, 1, 1, 1))
 
-        if local_rb.get_stored_size() >= local_buffer_size:
+        if local_rb.get_stored_size() >= LOCAL_BUFFER_SIZE:
             sample = local_rb.get_all_transitions()
             TD = abs_TD(model, target, sample).detach().cpu().numpy()
             global_rb.add(**sample, priorities=TD)
@@ -77,6 +85,9 @@ def explorer(global_rb, is_training_done, queue):
 
 
 if __name__ == "__main__":
+    num_episode = 1000000
+    min_epsilon, max_epsilon, epsilon_decay = 0, 0.1, 500000
+
     global_rb = MPPrioritizedReplayBuffer(BUFFER_SIZE, ENV_DICT)
 
     is_training_done = Event()
@@ -84,7 +95,7 @@ if __name__ == "__main__":
 
     qs = [SimpleQueue() for _ in range(N_EXPLORER)]
     ps = [Process(target=explorer,
-                  args=(global_rb, is_training_done, q))
+                  args=(global_rb, is_training_done, q, min_epsilon, max_epsilon, epsilon_decay))
           for q in qs]
 
     for p in ps:
@@ -101,7 +112,7 @@ if __name__ == "__main__":
     while global_rb.get_stored_size() < MIN_BUFFER:
         time.sleep(1)
 
-    for step in tqdm(range(NUM_EPOCHS)):
+    for step in tqdm(range(num_episode)):
         sample = global_rb.sample(BATCH_SIZE)
 
         unpacked_sample = unpack_sample(sample)
@@ -130,7 +141,7 @@ if __name__ == "__main__":
                 target_state[name] = tensor.detach().clone().cpu()
 
             for q in qs:
-                q.put((model_state, target_state))
+                q.put((model_state, target_state, step))
 
     is_training_done.set()
 

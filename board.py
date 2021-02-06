@@ -55,7 +55,9 @@ def encode_env(env, buffer,
                interest_agent=(1, 0, 0, 0),
                normal_reward=DEFAULT_NORMAL_REWARD,
                food_reward=DEFAULT_FOOD_REWARD,
-               hit_reward=DEFAULT_HIT_REWARD
+               food_reward_reduction_start=6,
+               hit_reward=DEFAULT_HIT_REWARD,
+               mode="normal"
                ):
     num_agent = len(env.state)
     t_max = len(env.steps)
@@ -78,16 +80,31 @@ def encode_env(env, buffer,
             reward = normal_reward
             length_diff = next_length_list[i] - current_length_list[i]
             if length_diff > 0:
-                reward = food_reward
+                if mode == "length":
+                    if current_length_list[i] <= food_reward_reduction_start:
+                        reward = food_reward
+                    else:
+                        reward = 1 / (current_length_list[i] - food_reward_reduction_start)
+                else:
+                    reward = food_reward
+
             elif length_diff < 0:
                 reward = hit_reward
 
-            buffer.add(board=current_board_list[i],
-                       action=action_list[i],
-                       reward=reward,
-                       next_board=next_board_list[i],
-                       done=next_done_list[i])
-
+            if mode == "length":
+                buffer.add(board=current_board_list[i],
+                           action=action_list[i],
+                           reward=reward,
+                           next_board=next_board_list[i],
+                           done=next_done_list[i],
+                           length=current_length_list[i],
+                           next_length=next_length_list)
+            else:
+                buffer.add(board=current_board_list[i],
+                           action=action_list[i],
+                           reward=reward,
+                           next_board=next_board_list[i],
+                           done=next_done_list[i])
             # print(current_board_list[i], action_list[i], reward, "\n", next_board_list[i], next_done_list[i], "\n")
         current_board_list = next_board_list
         current_length_list = next_length_list
@@ -99,7 +116,3 @@ if __name__ == '__main__':
     test_env = make("hungry_geese", debug=True)
     test_env.reset(4)
     test_env.run(['agent/wait_agent.py', 'agent/wait_agent.py', 'agent/wait_agent.py', 'agent/risk_averse_greedy.py'])
-
-    from replay_buffer import buffer
-    encode_env(test_env, buffer)
-    print(buffer.sample(2))

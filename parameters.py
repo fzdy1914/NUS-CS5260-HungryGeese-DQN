@@ -22,7 +22,7 @@ GAMMA = 0.99
 
 LEARNING_RATE = 0.001
 
-N_EXPLORER = 3
+N_EXPLORER = 1
 
 TARGET_UPDATE_FREQ = 50
 EXPLORER_UPDATE_FREQ = 100
@@ -68,4 +68,18 @@ ENV_DICT = {
         "shape": (ROW, COLUMN)
     },
     "done": {}
+}
+
+ENV_DICT_WITH_LENGTH = {
+    "board": {
+        "shape": (ROW, COLUMN)
+    },
+    "action": {},
+    "reward": {},
+    "next_board": {
+        "shape": (ROW, COLUMN)
+    },
+    "done": {},
+    "length": {},
+    "next_length": {}
 }

@@ -47,6 +47,49 @@ class ConvDQN(nn.Module):
         return x
 
 
+class ConvDQNWithLength(nn.Module):
+    def __init__(self, feature_size=1344, num_actions=4):
+        super().__init__()
+        self.num_actions = num_actions
+        self.cnn = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3),
+            nn.ReLU(),
+        )
+        self.dnn = nn.Sequential(
+            nn.Linear(feature_size + 1, 256),
+            nn.ReLU(),
+            nn.Linear(256, num_actions)
+        )
+
+    def forward(self, x, length):
+        if len(x.shape) == 3:
+            x = x.view(x.size(0), 1, x.size(1), x.size(2))
+        x = self.cnn(x)
+        x = x.view(x.size(0), -1)
+        x = torch.hstack((x, length))
+        x = self.dnn(x)
+        return x
+
+    def greedy(self, x, length):
+        x = self.forward(x, length)
+        x = x.max(dim=1)[1]
+        return x
+
+    def forward_max(self, x, length):
+        x = self.forward(x, length)
+        x = x.max(dim=1)[0]
+        return x
+
+    def act(self, x, length, epsilon=0.0):
+        x = self.greedy(x, length)
+        for i in range(x.size(0)):
+            if random.random() < epsilon:
+                x[i] = torch.randint(self.num_actions, size=(1,))
+        return x
+
+
 class ConvDQN_1(nn.Module):
     def __init__(self, feature_size=1344, num_actions=4):
         super().__init__()

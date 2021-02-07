@@ -7,7 +7,7 @@ from kaggle_environments import make
 import time
 import numpy as np
 from torch import optim
-from tqdm import tqdm
+from tqdm import trange
 from model import ConvDQN
 from board import encode_state, encode_env
 import torch.nn.functional as F
@@ -84,7 +84,7 @@ def explorer(global_rb, is_training_done, queue):
 
 
 if __name__ == "__main__":
-    num_episode = 1000000
+    num_episode = 5000000
     min_epsilon, max_epsilon, epsilon_decay = 0, 0.1, 500000
 
     global_rb = MPPrioritizedReplayBuffer(BUFFER_SIZE, ENV_DICT)
@@ -111,7 +111,9 @@ if __name__ == "__main__":
     while global_rb.get_stored_size() < MIN_BUFFER:
         time.sleep(1)
 
-    for step in tqdm(range(num_episode)):
+    t = trange(num_episode)
+    epsilon = max_epsilon
+    for step in t:
         sample = global_rb.sample(BATCH_SIZE)
 
         unpacked_sample = unpack_sample(sample)
@@ -142,10 +144,10 @@ if __name__ == "__main__":
             epsilon = compute_epsilon(step, min_epsilon, max_epsilon, epsilon_decay)
             for q in qs:
                 q.put((model_state, target_state, epsilon))
-
+        t.set_postfix(epsilon="%.3f" % epsilon, loss="%.3f" % loss.item())
     is_training_done.set()
 
     for p in ps:
         p.join()
 
-    torch.save(target.state_dict(), "state/model_4.pt")
+    torch.save(target.state_dict(), "state/ConvDQN/model_4.pt")

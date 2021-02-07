@@ -32,7 +32,7 @@ NUM2ACTION = {
 }
 
 
-class ConvDQN(nn.Module):
+class ConvDQNWithLength(nn.Module):
     def __init__(self, feature_size=1344, num_actions=4):
         super().__init__()
         self.num_actions = num_actions
@@ -43,26 +43,27 @@ class ConvDQN(nn.Module):
             nn.ReLU(),
         )
         self.dnn = nn.Sequential(
-            nn.Linear(feature_size, 256),
+            nn.Linear(feature_size + 1, 256),
             nn.ReLU(),
             nn.Linear(256, num_actions)
         )
 
-    def forward(self, x):
+    def forward(self, x, length):
         if len(x.shape) == 3:
             x = x.view(x.size(0), 1, x.size(1), x.size(2))
         x = self.cnn(x)
         x = x.view(x.size(0), -1)
+        x = torch.hstack((x, length))
         x = self.dnn(x)
         return x
 
-    def greedy(self, x):
-        x = self.forward(x)
+    def greedy(self, x, length):
+        x = self.forward(x, length)
         x = x.max(dim=1)[1]
         return x
 
-    def forward_max(self, x):
-        x = self.forward(x)
+    def forward_max(self, x, length):
+        x = self.forward(x, length)
         x = x.max(dim=1)[0]
         return x
 
@@ -96,7 +97,7 @@ def encode_observation(observation, action="NORTH"):
 idx = 0
 prev_action = "NORTH"
 
-model = ConvDQN()
+model = ConvDQNWithLength()
 model.load_state_dict(torch.load('/kaggle_simulations/agent/model.pt', map_location=torch.device('cpu')))
 model.eval()
 
@@ -107,7 +108,8 @@ def agent(obs_dict, config_dict):
     observation = Observation(obs_dict)
 
     board = torch.from_numpy(encode_observation(obs_dict, action=prev_action)).float()
-    action_list = model.forward(board.unsqueeze(0)).squeeze().topk(k=4)
+    length = torch.tensor(len(observation.geese[observation.index])).view(1, 1)
+    action_list = model.forward(board.unsqueeze(0), length).squeeze().topk(k=4)
     action = NUM2ACTION[action_list[1][0].item()]
     if Action[prev_action].opposite() == Action[action]:
         print("0. try opposite")

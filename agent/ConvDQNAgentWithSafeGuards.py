@@ -126,8 +126,9 @@ def agent(obs_dict, config_dict):
             continue
         if len(observation.geese[i]) > 0:
             other_goose_head.append(observation.geese[i][0])
-            other_goose_body.extend(observation.geese[i][:-1])
+            other_goose_body.extend(observation.geese[i])
 
+    print("other_body", other_goose_body)
     if len(self_goose) > 0:
         self_goose_head = self_goose[0]
         next_pos_idx = translate(self_goose_head, Action[action], COLUMN, ROW)

@@ -161,7 +161,6 @@ class ConvD3QN(nn.Module):
         x = self.cnn(x)
         x = x.view(x.size(0), -1)
         x_action, x_state = self.action_dnn(x), self.state_dnn(x)
-        print(x_action.shape, x_state.shape, x_state.repeat(1, self.num_actions).shape)
         x = x_action + x_state.repeat(1, self.num_actions)
         return x
 

@@ -32,7 +32,7 @@ NUM2ACTION = {
 }
 
 
-class ConvDQN(nn.Module):
+class ConvD3QN(nn.Module):
     def __init__(self, feature_size=1344, num_actions=4):
         super().__init__()
         self.num_actions = num_actions
@@ -42,10 +42,15 @@ class ConvDQN(nn.Module):
             nn.Conv2d(32, 64, kernel_size=3),
             nn.ReLU(),
         )
-        self.dnn = nn.Sequential(
+        self.action_dnn = nn.Sequential(
             nn.Linear(feature_size, 256),
             nn.ReLU(),
             nn.Linear(256, num_actions)
+        )
+        self.state_dnn = nn.Sequential(
+            nn.Linear(feature_size, 256),
+            nn.ReLU(),
+            nn.Linear(256, 1)
         )
 
     def forward(self, x):
@@ -53,7 +58,8 @@ class ConvDQN(nn.Module):
             x = x.view(x.size(0), 1, x.size(1), x.size(2))
         x = self.cnn(x)
         x = x.view(x.size(0), -1)
-        x = self.dnn(x)
+        x_action, x_state = self.action_dnn(x), self.state_dnn(x)
+        x = x_action + x_state.repeat(1, self.num_actions)
         return x
 
     def greedy(self, x):
@@ -96,7 +102,7 @@ def encode_observation(observation, action="NORTH"):
 idx = 0
 prev_action = "NORTH"
 
-model = ConvDQN()
+model = ConvD3QN()
 model.load_state_dict(torch.load('/kaggle_simulations/agent/model.pt', map_location=torch.device('cpu')))
 model.eval()
 

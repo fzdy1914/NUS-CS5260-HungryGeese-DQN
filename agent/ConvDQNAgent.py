@@ -93,7 +93,6 @@ def encode_observation(observation, action="NORTH"):
     return board
 
 
-idx = 0
 prev_action = "NORTH"
 
 model = ConvDQN()
@@ -102,7 +101,7 @@ model.eval()
 
 
 def agent(obs_dict, config_dict):
-    global idx, prev_action
+    global prev_action
 
     observation = Observation(obs_dict)
 
@@ -128,18 +127,18 @@ def agent(obs_dict, config_dict):
             other_goose_head.append(observation.geese[i][0])
             other_goose_body.extend(observation.geese[i])
 
-    print("other_body", other_goose_body)
+    # print("other_body", other_goose_body)
     if len(self_goose) > 0:
         self_goose_head = self_goose[0]
         next_pos_idx = translate(self_goose_head, Action[action], COLUMN, ROW)
         if next_pos_idx in other_goose_body:
-            print("try hit")
+            # print("try hit")
             for act in range(1, 4):
                 temp_action = NUM2ACTION[action_list[1][act].item()]
                 if Action[prev_action].opposite() == Action[temp_action]:
                     continue
                 if translate(self_goose_head, Action[temp_action], COLUMN, ROW) not in other_goose_body:
-                    print("1. prev:", action, "1.now:", temp_action)
+                    # print("1. prev:", action, "1.now:", temp_action)
                     action = temp_action
                     break
 
@@ -147,13 +146,13 @@ def agent(obs_dict, config_dict):
             for idx in adjacent_positions(next_pos_idx, COLUMN, ROW):
                 finish = False
                 if idx in other_goose_head:
-                    print("danger pos")
+                    # print("danger pos")
                     for act in range(1, 4):
                         temp_action = NUM2ACTION[action_list[1][act].item()]
                         if Action[prev_action].opposite() == Action[temp_action]:
                             continue
                         if translate(self_goose_head, Action[temp_action], COLUMN, ROW) not in other_goose_body:
-                            print("2. prev:", action, "2.now:", temp_action)
+                            # print("2. prev:", action, "2.now:", temp_action)
                             action = temp_action
                             finish = True
                             break

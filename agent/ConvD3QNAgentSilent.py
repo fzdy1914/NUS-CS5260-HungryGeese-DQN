@@ -99,26 +99,79 @@ def encode_observation(observation, action="NORTH"):
     return board
 
 
+prev_prev_action = "NORTH"
 prev_action = "NORTH"
+epoch = 0
 
 model = ConvD3QN()
 model.load_state_dict(torch.load('/kaggle_simulations/agent/model.pt', map_location=torch.device('cpu')))
 model.eval()
 
 
+def can_rotate(goose):
+    orders = [
+        [Action.WEST, Action.NORTH, Action.EAST],
+        [Action.SOUTH, Action.WEST, Action.NORTH],
+        [Action.EAST, Action.SOUTH, Action.WEST],
+        [Action.NORTH, Action.EAST, Action.SOUTH],
+
+        [Action.EAST, Action.NORTH, Action.WEST],
+        [Action.SOUTH, Action.EAST, Action.NORTH],
+        [Action.WEST, Action.SOUTH, Action.EAST],
+        [Action.NORTH, Action.WEST, Action.SOUTH],
+    ]
+    for order in orders:
+        pos = goose[0]
+
+        done = True
+        for i in range(3):
+            pos = translate(pos, order[i], COLUMN, ROW)
+            if pos != goose[i + 1]:
+                done = False
+                break
+        if done:
+            return True, order[1].name
+    return False, None
+
+
+def get_available_action(pos, other_goose_body):
+    action_list = list()
+    for action in Action:
+        if translate(pos, action, COLUMN, ROW) not in other_goose_body and action.opposite() != Action[prev_action]:
+            action_list.append(action.name)
+    return action_list
+
+
+def get_adjacent_action(action):
+    if action in ["NORTH", "SOUTH"]:
+        return ["EAST", "WEST"]
+    else:
+        return ["NORTH", "SOUTH"]
+
+
+def is_prev_same_direction():
+    return prev_action == prev_prev_action
+
+
+def update(action):
+    global prev_prev_action, prev_action, epoch
+    epoch += 1
+    prev_prev_action = prev_action
+    prev_action = action
+
+
+def get_active_geese_num(goose):
+    num = 0
+    for geese in goose:
+        if len(geese) > 0:
+            num += 1
+    return num
+
+
 def agent(obs_dict, config_dict):
-    global prev_action
+    global prev_action, epoch
 
     observation = Observation(obs_dict)
-
-    board = torch.from_numpy(encode_observation(obs_dict, action=prev_action)).float()
-    action_list = model.forward(board.unsqueeze(0)).squeeze().topk(k=4)
-    action = NUM2ACTION[action_list[1][0].item()]
-    if Action[prev_action].opposite() == Action[action]:
-        print("0. try opposite")
-        print("0. prev:", action, "0.now:", NUM2ACTION[action_list[1][1].item()])
-        action = NUM2ACTION[action_list[1][1].item()]
-
     self_goose = observation.geese[observation.index]
     food_list = observation.food
 
@@ -132,39 +185,57 @@ def agent(obs_dict, config_dict):
         if len(observation.geese[i]) > 0:
             other_goose_head.append(observation.geese[i][0])
             other_goose_body.extend(observation.geese[i])
+    # print("other_body", other_goose_body)
 
-    print("other_body", other_goose_body)
+    available_action = get_available_action(self_goose[0], other_goose_body)
+
+    board = torch.from_numpy(encode_observation(obs_dict, action=prev_action)).float()
+    action_list = model.forward(board.unsqueeze(0)).squeeze().topk(k=4)
+
+    ranked_action = list(filter(lambda x: x in available_action, [NUM2ACTION[i.item()] for i in action_list[1]]))
+    if len(ranked_action) == 0:
+        print("no way to go", epoch)
+        action = NUM2ACTION[action_list[1][0].item()]
+        update(action)
+        return action
+
+    # print(epoch, prev_action, ranked_action)
+
+    action = ranked_action[0]
+
+    if len(self_goose) == 4 and epoch < 128 and get_active_geese_num(observation.geese) > 2:
+        ok, temp_action = can_rotate(self_goose)
+        if ok:
+            action = temp_action
+            update(action)
+            return action
+
+        candidate_action = get_adjacent_action(prev_action)
+        intersect_action = list(filter(lambda x: x in candidate_action, ranked_action))
+        if len(intersect_action) > 0:
+            action = intersect_action[0]
+            if not is_prev_same_direction():
+                if Action[prev_prev_action].opposite().name in intersect_action:
+                    action = Action[prev_prev_action].opposite().name
+                    print("Candidate", action)
+            else:
+                print("same")
+            update(action)
+            return action
+        else:
+            print("can not rotate")
     if len(self_goose) > 0:
         self_goose_head = self_goose[0]
         next_pos_idx = translate(self_goose_head, Action[action], COLUMN, ROW)
-        if next_pos_idx in other_goose_body:
-            print("try hit")
-            for act in range(1, 4):
-                temp_action = NUM2ACTION[action_list[1][act].item()]
-                if Action[prev_action].opposite() == Action[temp_action]:
-                    continue
-                if translate(self_goose_head, Action[temp_action], COLUMN, ROW) not in other_goose_body:
-                    print("1. prev:", action, "1.now:", temp_action)
-                    action = temp_action
-                    break
-
         if next_pos_idx in food_list:
             for idx in adjacent_positions(next_pos_idx, COLUMN, ROW):
-                finish = False
                 if idx in other_goose_head:
-                    print("danger pos")
-                    for act in range(1, 4):
-                        temp_action = NUM2ACTION[action_list[1][act].item()]
-                        if Action[prev_action].opposite() == Action[temp_action]:
-                            continue
-                        if translate(self_goose_head, Action[temp_action], COLUMN, ROW) not in other_goose_body:
-                            print("2. prev:", action, "2.now:", temp_action)
-                            action = temp_action
-                            finish = True
-                            break
-
-                if finish:
+                    if len(ranked_action) > 1:
+                        action = ranked_action[1]
+                        break
+                    else:
+                        print("have to eat", ranked_action)
                     break
 
-    prev_action = action
+    update(action)
     return action

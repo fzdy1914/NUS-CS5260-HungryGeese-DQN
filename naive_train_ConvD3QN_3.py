@@ -8,7 +8,7 @@ import time
 import numpy as np
 from torch import optim
 from tqdm import trange
-from model import ConvD3QN_2
+from model import ConvD3QN_3
 from board import encode_state, encode_env
 import torch.nn.functional as F
 
@@ -55,8 +55,8 @@ def abs_TD(model, target, sample):
 def explorer(global_rb, is_training_done, queue):
     local_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT)
 
-    model = ConvD3QN_2().cuda()
-    target = ConvD3QN_2().cuda()
+    model = ConvD3QN_3().cuda()
+    target = ConvD3QN_3().cuda()
     target.load_state_dict(model.state_dict())
     env = make("hungry_geese", debug=False)
 
@@ -100,10 +100,10 @@ if __name__ == "__main__":
     for p in ps:
         p.start()
 
-    model = ConvD3QN_2().cuda()
+    model = ConvD3QN_3().cuda()
     # model.load_state_dict(torch.load("./state/model_3.pt"))
     model.train()
-    target = ConvD3QN_2().cuda()
+    target = ConvD3QN_3().cuda()
     target.load_state_dict(model.state_dict())
     target.eval()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
@@ -150,4 +150,4 @@ if __name__ == "__main__":
     for p in ps:
         p.join()
 
-    torch.save(target.state_dict(), "state/ConvD3QN_2.pt")
+    torch.save(target.state_dict(), "state/ConvD3QN_3.pt")

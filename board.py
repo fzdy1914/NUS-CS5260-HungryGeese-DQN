@@ -112,7 +112,27 @@ def encode_env(env, buffer,
     buffer.on_episode_end()
 
 
-if __name__ == '__main__':
-    test_env = make("hungry_geese", debug=True)
-    test_env.reset(4)
-    test_env.run(['agent/wait_agent.py', 'agent/wait_agent.py', 'agent/wait_agent.py', 'agent/risk_averse_greedy.py'])
+def encode_observation(observation, action="NORTH"):
+    board = np.zeros((ROW, COLUMN))
+    for pos in observation["food"]:
+        board[row_col(pos, COLUMN)] = Grid.FOOD
+
+    for geese in observation["geese"]:
+        for pos in geese:
+            board[row_col(pos, COLUMN)] = Grid.GOOSE_BODY
+        if len(geese) > 0:
+            board[row_col(geese[-1], COLUMN)] = Grid.OTHER_TAIL
+            board[row_col(geese[0], COLUMN)] = Grid.OTHER_HEAD
+
+    i = observation["index"]
+    self_goose = observation["geese"][i]
+    if len(self_goose) > 0:
+        board[row_col(self_goose[-1], COLUMN)] = Grid.GOOSE_TAIL
+        board[
+            row_col(translate(self_goose[0], Action[action].opposite(), COLUMN, ROW), COLUMN)
+        ] = Grid.GOOSE_BODY  # virtual body to avoid taking opposite action
+        head_pos = row_col(self_goose[0], COLUMN)
+        board[head_pos] = Grid.GOOSE_HEAD
+        board = np.roll(board, (ROW_CENTER - head_pos[0], COLUMN_CENTER - head_pos[1]), axis=(0, 1))
+
+    return board

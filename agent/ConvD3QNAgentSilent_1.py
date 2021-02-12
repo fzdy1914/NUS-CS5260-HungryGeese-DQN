@@ -5,7 +5,7 @@ import torch
 sys.path.append('/kaggle_simulations/agent/')
 from silent_agent_helper import can_rotate, get_available_action, get_adjacent_action, get_active_geese_num
 from parameters import ROW, COLUMN, NUM2ACTION
-from model import ConvD3QN
+from model import ConvD3QN_1
 from board import encode_observation
 
 
@@ -13,7 +13,7 @@ prev_prev_action = "NORTH"
 prev_action = "NORTH"
 epoch = 0
 
-model = ConvD3QN()
+model = ConvD3QN_1()
 model.load_state_dict(torch.load('/kaggle_simulations/agent/model.pt', map_location=torch.device('cpu')))
 model.eval()
 

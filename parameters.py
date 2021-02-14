@@ -83,3 +83,15 @@ ENV_DICT_WITH_LENGTH = {
     "length": {},
     "next_length": {}
 }
+
+ENV_DICT_STACK = {
+    "board": {
+        "shape": (5, ROW, COLUMN)
+    },
+    "action": {},
+    "reward": {},
+    "next_board": {
+        "shape": (5, ROW, COLUMN)
+    },
+    "done": {}
+}

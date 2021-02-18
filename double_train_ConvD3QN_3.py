@@ -109,7 +109,7 @@ if __name__ == "__main__":
         p.start()
 
     model = ConvD3QN_3().cuda()
-    # model.load_state_dict(torch.load("./state/model_3.pt"))
+    model.load_state_dict(torch.load("./state/ConvD3QN_3.pt"))
     model.train()
     target = ConvD3QN_3().cuda()
     target.load_state_dict(model.state_dict())

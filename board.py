@@ -111,6 +111,75 @@ def encode_env(env, buffer,
         current_done_list = next_done_list
     buffer.on_episode_end()
 
+def encode_failure_env(env, buffer,
+               interest_agent=(1, 0, 0, 0),
+               normal_reward=DEFAULT_NORMAL_REWARD,
+               food_reward=DEFAULT_FOOD_REWARD,
+               food_reward_reduction_start=6,
+               hit_reward=DEFAULT_HIT_REWARD,
+               failure_cutoff=5,
+               mode="normal"):
+    num_agent = len(env.state)
+    t_max = len(env.steps)
+    active_list = [True if active == 1 else False for active in interest_agent]
+
+    current_board_list, _, current_done_list, current_length_list = encode_state(env.steps[0])
+
+    failure_t_list = [t_max] * num_agent
+
+    for t in range(1, t_max):
+        for i in range(num_agent):
+            _, _, next_done_list, _ = encode_state(env.steps[t])
+            if next_done_list[i] and t < failure_t_list[i]:
+                failure_t_list[i] = t
+
+    for t in range(1, t_max):
+        next_board_list, action_list, next_done_list, next_length_list = encode_state(env.steps[t])
+
+        for i in range(num_agent):
+            if not active_list[i]:
+                continue
+            if next_done_list[i] and current_done_list[i]:
+                active_list[i] = False
+
+        for i in range(num_agent):
+            if not active_list[i] or t <= failure_t_list[i] - failure_cutoff:
+                continue
+
+            reward = normal_reward
+            length_diff = next_length_list[i] - current_length_list[i]
+            if length_diff > 0:
+                if mode == "length":
+                    if current_length_list[i] <= food_reward_reduction_start:
+                        reward = food_reward
+                    else:
+                        reward = 1 / (current_length_list[i] - food_reward_reduction_start)
+                else:
+                    reward = food_reward
+
+            elif length_diff < 0:
+                reward = hit_reward
+
+            if mode == "length":
+                buffer.add(board=current_board_list[i],
+                           action=action_list[i],
+                           reward=reward,
+                           next_board=next_board_list[i],
+                           done=next_done_list[i],
+                           length=current_length_list[i],
+                           next_length=next_length_list[i])
+            else:
+                buffer.add(board=current_board_list[i],
+                           action=action_list[i],
+                           reward=reward,
+                           next_board=next_board_list[i],
+                           done=next_done_list[i])
+            # print(current_board_list[i], action_list[i], reward, "\n", next_board_list[i], next_done_list[i], "\n")
+        current_board_list = next_board_list
+        current_length_list = next_length_list
+        current_done_list = next_done_list
+    buffer.on_episode_end()
+
 
 def encode_observation(observation, action="NORTH"):
     board = np.zeros((ROW, COLUMN))

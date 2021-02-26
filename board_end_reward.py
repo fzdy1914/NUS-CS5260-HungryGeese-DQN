@@ -68,12 +68,14 @@ def encode_env(env, buffer,
     for t in range(1, t_max):
         next_board_list, action_list, next_done_list, next_length_list = encode_state(env.steps[t])
 
+        num_agent_end_t = 0
+
         for i in range(num_agent):
             if not active_list[i]:
                 continue
             if next_done_list[i] and current_done_list[i]:
                 active_list[i] = False
-                num_agent_active = num_agent_active - 1
+                num_agent_end_t = num_agent_end_t + 1
 
         for i in range(num_agent):
             if not active_list[i]:
@@ -81,10 +83,17 @@ def encode_env(env, buffer,
 
             reward = normal_reward
             length_diff = next_length_list[i] - current_length_list[i]
+
             if length_diff > 0:
                 reward = 0
             elif length_diff < 0:
-                reward = hit_reward[num_agent - num_agent_active]
+                assert num_agent - num_agent_active + num_agent_end_t - 1 >= 0
+                reward = hit_reward[num_agent - num_agent_active + num_agent_end_t - 1]
+
+            if num_agent_active == 1:
+                reward = hit_reward[num_agent - 1]
+
+            num_agent_active = num_agent_active - num_agent_end_t
 
             if mode == "length":
                 buffer.add(board=current_board_list[i],

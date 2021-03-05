@@ -241,11 +241,11 @@ class ConvD3QN_2(nn.Module):
 
 
 class ConvD3QN_3(nn.Module):
-    def __init__(self, num_actions=4):
+    def __init__(self, num_actions=4, in_channel=1):
         super().__init__()
         self.num_actions = num_actions
         self.cnn = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=2),
+            nn.Conv2d(in_channel, 64, kernel_size=2),
             nn.ReLU(),
             nn.Conv2d(64, 32, kernel_size=2),
             nn.ReLU(),

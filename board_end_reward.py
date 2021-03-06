@@ -53,47 +53,54 @@ def encode_state(state):
 
 def encode_env(env, buffer,
                interest_agent=(1, 0, 0, 0),
-               normal_reward=DEFAULT_NORMAL_REWARD,
-               food_reward=DEFAULT_FOOD_REWARD,
-               food_reward_reduction_start=6,
-               hit_reward=DEFAULT_END_HIT_REWARD,
                mode="normal"
                ):
     num_agent = len(env.state)
     t_max = len(env.steps)
     active_list = [True if active == 1 else False for active in interest_agent]
-    num_agent_active = num_agent
+
+    last_step = env.steps[-1]
+    rewards = {state['observation']['index']: state['reward'] for state in last_step}
+    final_rewards = [0] * 4
+    for p, r in rewards.items():
+        for pp, rr in rewards.items():
+            if p != pp:
+                if r > rr:
+                    final_rewards[p] += 1 / 3
+                elif r < rr:
+                    final_rewards[p] -= 1 / 3
+    print("r", rewards)
+    print("fr", final_rewards)
 
     current_board_list, _, current_done_list, current_length_list = encode_state(env.steps[0])
     for t in range(1, t_max):
         next_board_list, action_list, next_done_list, next_length_list = encode_state(env.steps[t])
-
-        num_agent_end_t = 0
+        need_update_reward = 0
 
         for i in range(num_agent):
             if not active_list[i]:
                 continue
             if next_done_list[i] and current_done_list[i]:
                 active_list[i] = False
-                num_agent_end_t = num_agent_end_t + 1
+                need_update_reward += 1
+
+        if need_update_reward > 0:
+            if need_update_reward == 4:
+                pass
+            if need_update_reward == 3:
+                pass
 
         for i in range(num_agent):
             if not active_list[i]:
                 continue
 
-            reward = normal_reward
+            reward = 0
             length_diff = next_length_list[i] - current_length_list[i]
 
-            if length_diff > 0:
-                reward = 0
-            elif length_diff < 0:
-                assert num_agent - num_agent_active + num_agent_end_t - 1 >= 0
-                reward = hit_reward[num_agent - num_agent_active + num_agent_end_t - 1]
-
-            if num_agent_active == 1:
-                reward = hit_reward[num_agent - 1]
-
-            num_agent_active = num_agent_active - num_agent_end_t
+            if t == t_max - 1:
+                reward = final_rewards[i]
+            if length_diff < 0:
+                reward = final_rewards[i]
 
             if mode == "length":
                 buffer.add(board=current_board_list[i],

@@ -8,7 +8,7 @@ import time
 import numpy as np
 from torch import optim
 from tqdm import trange
-from model import ConvD3QN_3
+from model import ConvD3QN_5d
 from board_5_double_buffer import encode_state_stack, encode_env_stack, encode_failure_env
 import torch.nn.functional as F
 
@@ -56,8 +56,8 @@ def explorer(global_rb, global_failure_rb, is_training_done, queue):
     local_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT_STACK)
     local_failure_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT_STACK)
 
-    model = ConvD3QN_3().cuda()
-    target = ConvD3QN_3().cuda()
+    model = ConvD3QN_5d().cuda()
+    target = ConvD3QN_5d().cuda()
     target.load_state_dict(model.state_dict())
     env = make("hungry_geese", debug=False)
 
@@ -90,6 +90,7 @@ def explorer(global_rb, global_failure_rb, is_training_done, queue):
             global_failure_rb.add(**sample, priorities=TD)
             local_failure_rb.clear()
 
+
 if __name__ == "__main__":
     num_episode = 10000000
     min_epsilon, max_epsilon, epsilon_decay = 0, 0.1, 1000000
@@ -108,10 +109,10 @@ if __name__ == "__main__":
     for p in ps:
         p.start()
 
-    model = ConvD3QN_3().cuda()
+    model = ConvD3QN_5d().cuda()
     # model.load_state_dict(torch.load("./state/ConvD3QN_3.pt"))
     model.train()
-    target = ConvD3QN_3().cuda()
+    target = ConvD3QN_5d().cuda()
     target.load_state_dict(model.state_dict())
     target.eval()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)

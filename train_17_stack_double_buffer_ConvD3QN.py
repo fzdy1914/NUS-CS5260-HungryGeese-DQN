@@ -53,8 +53,8 @@ def abs_TD(model, target, sample):
 
 
 def explorer(global_rb, global_failure_rb, is_training_done, queue):
-    local_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT_STACK)
-    local_failure_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT_STACK)
+    local_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT_17)
+    local_failure_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT_17)
 
     model = ConvD3QN_17d().cuda()
     target = ConvD3QN_17d().cuda()
@@ -95,8 +95,8 @@ if __name__ == "__main__":
     num_episode = 10000000
     min_epsilon, max_epsilon, epsilon_decay = 0, 0.1, 1000000
 
-    global_rb = MPPrioritizedReplayBuffer(BUFFER_SIZE, ENV_DICT_STACK)
-    global_failure_rb = MPPrioritizedReplayBuffer(BUFFER_SIZE, ENV_DICT_STACK)
+    global_rb = MPPrioritizedReplayBuffer(BUFFER_SIZE, ENV_DICT_17)
+    global_failure_rb = MPPrioritizedReplayBuffer(BUFFER_SIZE, ENV_DICT_17)
 
     is_training_done = Event()
     is_training_done.clear()

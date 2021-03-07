@@ -9,7 +9,7 @@ import numpy as np
 from torch import optim
 from tqdm import trange
 from model import ConvD3QN_17d
-from board_5_double_buffer import encode_state_stack, encode_env_stack, encode_failure_env
+from board_17_double_buffer import encode_state_stack_plus, encode_env_stack_plus, encode_failure_env
 import torch.nn.functional as F
 
 from cpprb import ReplayBuffer, MPPrioritizedReplayBuffer
@@ -70,12 +70,12 @@ def explorer(global_rb, global_failure_rb, is_training_done, queue):
 
         env.reset(4)
         while not env.done:
-            board_list, _, _, _ = encode_state_stack(env.state)
+            board_list, _, _, _ = encode_state_stack_plus(env.state)
             action = model.act(torch.from_numpy(np.stack(board_list)).float().cuda(), epsilon=epsilon)
             action = [NUM2ACTION[i.item()] for i in action]
             env.step(action)
 
-        encode_env_stack(env, local_rb, (1, 1, 1, 1))
+        encode_env_stack_plus(env, local_rb, (1, 1, 1, 1))
         encode_failure_env(env, local_failure_rb, (1, 1, 1, 1))
 
         if local_rb.get_stored_size() >= LOCAL_BUFFER_SIZE:

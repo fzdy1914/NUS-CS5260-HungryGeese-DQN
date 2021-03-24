@@ -97,3 +97,41 @@ class DenseNetStack(nn.Module):
             if random.random() < epsilon:
                 x[i] = torch.randint(4, size=(1,))
         return x
+
+class DenseNetStackPlus(nn.Module):
+    def __init__(self):
+        super().__init__()
+        layers, filters = 6, 32
+        self.conv0 = ConvBlock(17, filters)
+        self.blocks = nn.ModuleList([ConvBlock(filters, filters) for _ in range(layers)])
+        self.action_dnn = nn.Linear(filters, 4, bias=False)
+        self.state_dnn = nn.Linear(filters, 1, bias=False)
+
+    def forward(self, x):
+        if len(x.shape) == 3:
+            x = x.view(x.size(0), 1, x.size(1), x.size(2))
+        h = F.relu_(self.conv0(x))
+        for block in self.blocks:
+            h = F.relu_(h + block(h))
+
+        h_avg = h.view(h.size(0), h.size(1), -1).mean(-1)
+        p = self.action_dnn(h_avg)
+        v = self.state_dnn(h_avg)
+        return p + v.repeat(1, 4)
+
+    def greedy(self, x):
+        x = self.forward(x)
+        x = x.max(dim=1)[1]
+        return x
+
+    def forward_max(self, x):
+        x = self.forward(x)
+        x = x.max(dim=1)[0]
+        return x
+
+    def act(self, x, epsilon=0.0):
+        x = self.greedy(x)
+        for i in range(x.size(0)):
+            if random.random() < epsilon:
+                x[i] = torch.randint(4, size=(1,))
+        return x

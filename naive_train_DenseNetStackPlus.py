@@ -53,7 +53,7 @@ def abs_TD(model, target, sample):
 
 
 def explorer(global_rb, is_training_done, queue):
-    local_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT_STACK)
+    local_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT_STACK_PLUS)
 
     model = DenseNetStackPlus().cuda()
     target = DenseNetStackPlus().cuda()
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     num_episode = 1000000
     min_epsilon, max_epsilon, epsilon_decay = 0, 0.1, 100000
 
-    global_rb = MPPrioritizedReplayBuffer(BUFFER_SIZE, ENV_DICT_STACK)
+    global_rb = MPPrioritizedReplayBuffer(BUFFER_SIZE, ENV_DICT_STACK_PLUS)
 
     is_training_done = Event()
     is_training_done.clear()

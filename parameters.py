@@ -95,3 +95,15 @@ ENV_DICT_STACK = {
     },
     "done": {}
 }
+
+ENV_DICT_STACK_PLUS = {
+    "board": {
+        "shape": (17, ROW, COLUMN)
+    },
+    "action": {},
+    "reward": {},
+    "next_board": {
+        "shape": (17, ROW, COLUMN)
+    },
+    "done": {}
+}

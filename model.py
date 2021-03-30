@@ -399,12 +399,12 @@ class ConvD3QN_6(nn.Module):
             nn.ReLU(),
         )
         self.action_dnn = nn.Sequential(
-            nn.Linear(1440, 256),
+            nn.Linear(672, 256),
             nn.ReLU(),
             nn.Linear(256, num_actions)
         )
         self.state_dnn = nn.Sequential(
-            nn.Linear(1440, 128),
+            nn.Linear(672, 128),
             nn.ReLU(),
             nn.Linear(128, 1)
         )

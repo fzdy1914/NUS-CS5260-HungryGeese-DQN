@@ -342,7 +342,7 @@ class ConvD3QN_5(nn.Module):
         super().__init__()
         self.num_actions = num_actions
         self.cnn = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=2),
+            nn.Conv2d(17, 64, kernel_size=2),
             nn.ReLU(),
             nn.Conv2d(64, 32, kernel_size=2),
             nn.ReLU(),

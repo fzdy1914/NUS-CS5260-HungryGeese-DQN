@@ -90,7 +90,7 @@ def encode_env_stack_plus(env, interest_agent=(1, 1, 1, 1)):
                 reward = final_rewards[i] + split_rewards[i]
             if length_diff < 0:
                 reward = final_rewards[i] + split_rewards[i]
-                
+
                 if need_update_reward == 0 or need_update_reward == 1:
                     pass
                 else:

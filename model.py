@@ -339,7 +339,7 @@ class ConvD3QN_4(nn.Module):
 
 
 class ConvD3QN_5d(nn.Module):
-        def __init__(self, feature_size=1344, num_actions=4):
+        def __init__(self, num_actions=4):
             super().__init__()
             self.num_actions = num_actions
             self.cnn = nn.Sequential(
@@ -349,14 +349,14 @@ class ConvD3QN_5d(nn.Module):
                 nn.ReLU(),
             )
             self.action_dnn = nn.Sequential(
-                nn.Linear(feature_size, 256),
+                nn.Linear(1440, 256),
                 nn.ReLU(),
                 nn.Linear(256, num_actions)
             )
             self.state_dnn = nn.Sequential(
-                nn.Linear(feature_size, 256),
+                nn.Linear(1440, 128),
                 nn.ReLU(),
-                nn.Linear(256, 1)
+                nn.Linear(128, 1)
             )
 
         def forward(self, x):

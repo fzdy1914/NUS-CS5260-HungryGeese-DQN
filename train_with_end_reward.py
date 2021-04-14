@@ -8,8 +8,8 @@ import time
 import numpy as np
 from torch import optim
 from tqdm import trange
-from model import ConvD3QN
-from board_end_reward import encode_state, encode_env
+from model import ConvD3QN_5d
+from board_5_double_buffer_end_reward import encode_state_stack, encode_env_stack, encode_failure_env
 import torch.nn.functional as F
 
 from cpprb import ReplayBuffer, MPPrioritizedReplayBuffer
@@ -52,11 +52,12 @@ def abs_TD(model, target, sample):
         return torch.abs(q1 - q2)
 
 
-def explorer(global_rb, is_training_done, queue):
-    local_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT)
+def explorer(global_rb, global_failure_rb, is_training_done, queue):
+    local_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT_STACK)
+    local_failure_rb = ReplayBuffer(LOCAL_BUFFER_SIZE, ENV_DICT_STACK)
 
-    model = ConvD3QN().cuda()
-    target = ConvD3QN().cuda()
+    model = ConvD3QN_5d().cuda()
+    target = ConvD3QN_5d().cuda()
     target.load_state_dict(model.state_dict())
     env = make("hungry_geese", debug=False)
 
@@ -69,12 +70,13 @@ def explorer(global_rb, is_training_done, queue):
 
         env.reset(4)
         while not env.done:
-            board_list, _, _, _ = encode_state(env.state)
+            board_list, _, _, _ = encode_state_stack(env.state)
             action = model.act(torch.from_numpy(np.stack(board_list)).float().cuda(), epsilon=epsilon)
             action = [NUM2ACTION[i.item()] for i in action]
             env.step(action)
 
-        encode_env(env, local_rb, (1, 1, 1, 1))
+        encode_env_stack(env, local_rb, (1, 1, 1, 1))
+        encode_failure_env(env, local_failure_rb, (1, 1, 1, 1))
 
         if local_rb.get_stored_size() >= LOCAL_BUFFER_SIZE:
             sample = local_rb.get_all_transitions()
@@ -82,39 +84,47 @@ def explorer(global_rb, is_training_done, queue):
             global_rb.add(**sample, priorities=TD)
             local_rb.clear()
 
+        if local_failure_rb.get_stored_size() >= LOCAL_BUFFER_SIZE:
+            sample = local_failure_rb.get_all_transitions()
+            TD = abs_TD(model, target, sample).detach().cpu().numpy()
+            global_failure_rb.add(**sample, priorities=TD)
+            local_failure_rb.clear()
+
 
 if __name__ == "__main__":
-    num_episode = 5000000
-    min_epsilon, max_epsilon, epsilon_decay = 0, 0.1, 500000
+    num_episode = 10000000
+    min_epsilon, max_epsilon, epsilon_decay = 0, 0.1, 1000000
 
-    global_rb = MPPrioritizedReplayBuffer(BUFFER_SIZE, ENV_DICT)
+    global_rb = MPPrioritizedReplayBuffer(BUFFER_SIZE, ENV_DICT_STACK)
+    global_failure_rb = MPPrioritizedReplayBuffer(BUFFER_SIZE, ENV_DICT_STACK)
 
     is_training_done = Event()
     is_training_done.clear()
 
     qs = [SimpleQueue() for _ in range(N_EXPLORER)]
     ps = [Process(target=explorer,
-                  args=(global_rb, is_training_done, q))
+                  args=(global_rb, global_failure_rb, is_training_done, q))
           for q in qs]
 
     for p in ps:
         p.start()
 
-    model = ConvD3QN().cuda()
-    # model.load_state_dict(torch.load("./state/model_3.pt"))
+    model = ConvD3QN_5d().cuda()
+    # model.load_state_dict(torch.load("./state/ConvD3QN_3.pt"))
     model.train()
-    target = ConvD3QN().cuda()
+    target = ConvD3QN_5d().cuda()
     target.load_state_dict(model.state_dict())
     target.eval()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-    while global_rb.get_stored_size() < MIN_BUFFER:
+    while global_rb.get_stored_size() < MIN_BUFFER or global_failure_rb.get_stored_size() < MIN_BUFFER:
+    #while global_rb.get_stored_size() < MIN_BUFFER:
         time.sleep(1)
 
     t = trange(num_episode)
     epsilon = max_epsilon
     for step in t:
-        sample = global_rb.sample(BATCH_SIZE)
+        sample = global_rb.sample(BATCH_SIZE / 2)
 
         unpacked_sample = unpack_sample(sample)
         q1, q2 = both_Q(model, target, unpacked_sample)
@@ -128,6 +138,21 @@ if __name__ == "__main__":
             q1 = Q_model(model, unpacked_sample[0], unpacked_sample[1])
             absTD = torch.abs(q1 - q2).detach().cpu()
         global_rb.update_priorities(sample["indexes"], absTD)
+
+        sample = global_failure_rb.sample(BATCH_SIZE / 2)
+
+        unpacked_sample = unpack_sample(sample)
+        q1, q2 = both_Q(model, target, unpacked_sample)
+        loss = F.smooth_l1_loss(q1, q2)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        with torch.no_grad():
+            q1 = Q_model(model, unpacked_sample[0], unpacked_sample[1])
+            absTD = torch.abs(q1 - q2).detach().cpu()
+        global_failure_rb.update_priorities(sample["indexes"], absTD)
 
         if step % TARGET_UPDATE_FREQ == 0:
             target.load_state_dict(model.state_dict())
@@ -150,4 +175,4 @@ if __name__ == "__main__":
     for p in ps:
         p.join()
 
-    torch.save(target.state_dict(), "state/end_reward/ConvD3QN.pt")
+    torch.save(target.state_dict(), "state/double-5-end-ConvD3QN.pt")

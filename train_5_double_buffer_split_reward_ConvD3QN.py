@@ -8,7 +8,7 @@ import time
 import numpy as np
 from torch import optim
 from tqdm import trange
-from model import ConvD3QN_5d
+from model import ConvD3QN_5d_o as ConvD3QN_5d
 from board_5_double_buffer_split_reward import encode_state_stack, encode_env_stack, encode_failure_env
 import torch.nn.functional as F
 
